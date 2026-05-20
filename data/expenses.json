@@ -1,1 +1,44 @@
-[]
+[
+  {
+    "id": "mpdy8ge3x6y0z",
+    "date": "2026-05-20",
+    "description": "parkoviště",
+    "amount": 1575,
+    "category": "Doprava"
+  },
+  {
+    "id": "mpdy8vwcmfyqg",
+    "date": "2026-05-20",
+    "description": "Kočárek",
+    "amount": 1519,
+    "category": "Nákupy"
+  },
+  {
+    "id": "mpdy9n7bg9elj",
+    "date": "2026-05-20",
+    "description": "Letenka CZ-SPA",
+    "amount": 11220,
+    "category": "Doprava"
+  },
+  {
+    "id": "mpdya30ycmwhn",
+    "date": "2026-05-20",
+    "description": "letenka SPA-CZ",
+    "amount": 7091,
+    "category": "Doprava"
+  },
+  {
+    "id": "mpdy7y11fdega",
+    "date": "2026-05-19",
+    "description": "Půjčovna auta",
+    "amount": 2630,
+    "category": "Doprava"
+  },
+  {
+    "id": "mpdy74yh678ee",
+    "date": "2026-05-18",
+    "description": "Hotel",
+    "amount": 68874,
+    "category": "Ubytování"
+  }
+]
