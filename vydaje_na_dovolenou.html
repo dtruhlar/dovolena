@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dovolená - Správce Výdajů</title>
+    <!-- Tailwind CSS pro moderní a čistý design -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js pro interaktivní grafy -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen antialiased">
+
+    <!-- Hlavní kontejner -->
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        
+        <!-- Hlavička aplikace -->
+        <header class="flex flex-col md:flex-row md:items-center md:justify-between pb-6 border-b border-slate-800 mb-8 gap-4">
+            <div>
+                <h1 class="text-3xl font-bold tracking-tight bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
+                    Sledování Výdajů na Dovolenou
+                </h1>
+                <p class="text-sm text-slate-400 mt-1">
+                    Bezpečné ukládání přímo do vašeho GitHub repozitáře v JSON formátu.
+                </p>
+            </div>
+            
+            <!-- Globální akce -->
+            <div class="flex flex-wrap items-center gap-3">
+                <button id="btn-load" onclick="loadFromGitHub()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-cyan-400 font-medium rounded-lg text-sm transition-all duration-200 border border-slate-700 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.253 8H18"></path></svg>
+                    Načíst data
+                </button>
+                <button id="btn-save" onclick="saveToGitHub()" class="px-5 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-semibold rounded-lg text-sm shadow-lg shadow-cyan-500/10 transition-all duration-200 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+                    Uložit změny
+                </button>
+            </div>
+        </header>
+
+        <!-- Status bar pro notifikace -->
+        <div id="status-bar" class="hidden mb-6 p-4 rounded-xl text-sm font-medium flex items-center justify-between transition-all duration-300">
+            <span id="status-text"></span>
+            <button onclick="hideStatus()" class="text-current opacity-60 hover:opacity-100">&times;</button>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- LEVÝ SLOUPCOVÝ PANEL: Nastavení a Zadávání -->
+            <div class="space-y-6 lg:col-span-1">
+                
+                <!-- 1. KONFIGURACE GITHUB API -->
+                <div class="bg-slate-800/50 border border-slate-800 rounded-2xl p-6 backdrop-blur-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-md font-semibold text-slate-200 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-slate-400" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"></path></svg>
+                            Připojení k GitHubu
+                        </h2>
+                        <span id="badge-auth" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">Nenačteno</span>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Osobní přístupový token (PAT)</label>
+                            <input type="password" id="gh-token" placeholder="ghp_xxxxxxxxxxxx" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-cyan-500 text-slate-100 placeholder-slate-600">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Vlastník (Uživatel)</label>
+                                <input type="text" id="gh-owner" placeholder="např. david-truhlar" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-cyan-500 text-slate-100 placeholder-slate-600">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Repozitář</label>
+                                <input type="text" id="gh-repo" placeholder="např. holiday-expenses" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-cyan-500 text-slate-100 placeholder-slate-600">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Cesta k souboru v repozitáři</label>
+                            <input type="text" id="gh-path" value="data/expenses.json" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-cyan-500 text-slate-100">
+                        </div>
+                        <p class="text-[11px] text-slate-500 leading-relaxed pt-1">
+                            * Token a nastavení se ukládají pouze lokálně ve vašem prohlížeči (localStorage). Nikam se neodesílají kromě přímého volání oficiálního GitHub API.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 2. FORMULÁŘ PRO NOVÝ VÝDAJ -->
+                <div class="bg-slate-800/50 border border-slate-800 rounded-2xl p-6 backdrop-blur-sm">
+                    <h2 class="text-md font-semibold text-slate-200 mb-4 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        Přidat nový výdaj
+                    </h2>
+                    
+                    <form id="expense-form" onsubmit="addExpense(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Datum</label>
+                            <input type="date" id="exp-date" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-cyan-500 text-slate-100">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Popis / Položka</label>
+                            <input type="text" id="exp-desc" placeholder="např. Večeře v restauraci, Benzín..." required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-cyan-500 text-slate-100 placeholder-slate-600">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Částka (Kč)</label>
+                                <input type="number" step="any" id="exp-amount" placeholder="0.00" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-cyan-500 text-slate-100 placeholder-slate-600">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Kategorie</label>
+                                <select id="exp-category" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-cyan-500 text-slate-100">
+                                    <option value="Ubytování">Ubytování</option>
+                                    <option value="Doprava">Doprava</option>
+                                    <option value="Jídlo a pití">Jídlo a pití</option>
+                                    <option value="Zábava a památky">Zábava</option>
+                                    <option value="Nákupy">Nákupy</option>
+                                    <option value="Ostatní">Ostatní</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full mt-2 py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-100 rounded-lg text-sm font-medium transition-colors duration-150 border border-slate-600">
+                            Přidat do tabulky
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- PRAVÝ SLOUPCOVÝ PANEL: Analýza, Grafy, Tabulka -->
+            <div class="space-y-6 lg:col-span-2">
+                
+                <!-- STATISTIKY & INTERAKTIVNÍ GRAF -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Celková suma -->
+                    <div class="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between shadow-md">
+                        <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Celkové výdaje</span>
+                        <div class="mt-4">
+                            <span id="stat-total" class="text-3xl font-bold text-white">0,00</span>
+                            <span class="text-lg font-medium text-cyan-400 ml-1">Kč</span>
+                        </div>
+                        <div class="text-[11px] text-slate-500 mt-2" id="stat-count">Položek: 0</div>
+                    </div>
+                    
+                    <!-- Grafický přehled kategorií -->
+                    <div class="bg-slate-800/40 border border-slate-800 rounded-2xl p-4 md:col-span-2 flex flex-col md:flex-row items-center gap-4">
+                        <div class="w-full md:w-1/2 max-h-[160px] flex justify-center">
+                            <canvas id="categoryChart"></canvas>
+                        </div>
+                        <div id="chart-legend" class="w-full md:w-1/2 space-y-1.5 text-xs">
+                            <!-- Zde se dynamicky vykreslí legenda s procenty -->
+                            <p class="text-slate-500 italic">Žádná data k zobrazení</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- HLAVNÍ TABULKA POLOŽEK -->
+                <div class="bg-slate-800/50 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+                    <div class="p-5 border-b border-slate-800 flex items-center justify-between">
+                        <h3 class="text-sm font-semibold text-slate-200 uppercase tracking-wider">Položkový rozpis výdajů</h3>
+                        <span id="unsaved-badge" class="hidden text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 animate-pulse">Neuložené změny</span>
+                    </div>
+                    
+                    <div class="overflow-x-auto max-h-[450px] overflow-y-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-900/60 text-xs font-semibold text-slate-400 border-b border-slate-800">
+                                    <th class="p-4 w-28">Datum</th>
+                                    <th class="p-4">Kategorie</th>
+                                    <th class="p-4">Popis / Položka</th>
+                                    <th class="p-4 text-right w-32">Částka</th>
+                                    <th class="p-4 w-12 text-center"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="expenses-tbody" class="divide-y divide-slate-800/60 text-sm">
+                                <!-- Dynamicky vkládané řádky -->
+                                <tr>
+                                    <td colspan="5" class="p-8 text-center text-slate-500 italic">
+                                        Tabulka je prázdná. Propojte aplikaci s GitHubem nebo začněte přidáním položky.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIKA APLIKACE -->
+    <script>
+        // Inicializace stavu aplikace
+        let expensesData = [];
+        let currentFileSha = null; // Důležité pro GitHub API aktualizaci (přepis souboru)
+        let hasUnsavedChanges = false;
+        let myChart = null;
+
+        // Barvy pro jednotlivé kategorie
+        const categoryColors = {
+            'Ubytování': '#38bdf8',       // cyan-400
+            'Doprava': '#fb923c',         // orange-400
+            'Jídlo a pití': '#4ade80',    // green-400
+            'Zábava a památky': '#c084fc',// purple-400
+            'Nákupy': '#f472b6',          // pink-400
+            'Ostatní': '#94a3b8'          // slate-400
+        };
+
+        // Načtení konfigurace z localStorage při startu
+        window.onload = function() {
+            document.getElementById('gh-token').value = localStorage.getItem('gh_token') || '';
+            document.getElementById('gh-owner').value = localStorage.getItem('gh_owner') || '';
+            document.getElementById('gh-repo').value = localStorage.getItem('gh_repo') || '';
+            const savedPath = localStorage.getItem('gh_path');
+            if (savedPath) document.getElementById('gh-path').value = savedPath;
+            
+            // Nastavení dnešního data do formuláře jako default
+            document.getElementById('exp-date').value = new Date().toISOString().split('T')[0];
+            
+            if(localStorage.getItem('gh_token') && localStorage.getItem('gh_repo')) {
+                showStatus('Konfigurace načtena z prohlížeče. Klepněte na "Načíst data" pro synchronizaci.', 'info');
+                updateAuthBadge(true, "Konfigurováno");
+            }
+            initChart();
+        };
+
+        // Pomocné uložení konfigurace
+        function saveConfigToLocal() {
+            localStorage.setItem('gh_token', document.getElementById('gh-token').value.trim());
+            localStorage.setItem('gh_owner', document.getElementById('gh-owner').value.trim());
+            localStorage.setItem('gh_repo', document.getElementById('gh-repo').value.trim());
+            localStorage.setItem('gh_path', document.getElementById('gh-path').value.trim());
+        }
+
+        // Notifikační lišta
+        function showStatus(text, type = 'success') {
+            const bar = document.getElementById('status-bar');
+            const txt = document.getElementById('status-text');
+            bar.classList.remove('hidden', 'bg-emerald-500/10', 'text-emerald-400', 'border-emerald-500/20', 'bg-rose-500/10', 'text-rose-400', 'border-rose-500/20', 'bg-blue-500/10', 'text-blue-400', 'border-blue-500/20');
+            
+            if (type === 'success') {
+                bar.classList.add('bg-emerald-500/10', 'text-emerald-400', 'border', 'border-emerald-500/20');
+            } else if (type === 'error') {
+                bar.classList.add('bg-rose-500/10', 'text-rose-400', 'border', 'border-rose-500/20');
+            } else {
+                bar.classList.add('bg-blue-500/10', 'text-blue-400', 'border', 'border-blue-500/20');
+            }
+            txt.innerText = text;
+        }
+
+        function hideStatus() {
+            document.getElementById('status-bar').classList.add('hidden');
+        }
+
+        function updateAuthBadge(isActive, text) {
+            const badge = document.getElementById('badge-auth');
+            badge.innerText = text;
+            if(isActive) {
+                badge.classList.remove('bg-rose-500/10', 'text-rose-400', 'border-rose-500/20');
+                badge.classList.add('bg-emerald-500/10', 'text-emerald-400', 'border-emerald-500/20');
+            } else {
+                badge.classList.remove('bg-emerald-500/10', 'text-emerald-400', 'border-emerald-500/20');
+                badge.classList.add('bg-rose-500/10', 'text-rose-400', 'border-rose-500/20');
+            }
+        }
+
+        function setUnsavedChanges(state) {
+            hasUnsavedChanges = state;
+            const badge = document.getElementById('unsaved-badge');
+            if(state) badge.classList.remove('hidden');
+            else badge.classList.add('hidden');
+        }
+
+        // NAČTENÍ DAT Z GITHUB API (GET)
+        async function loadFromGitHub() {
+            saveConfigToLocal();
+            const token = document.getElementById('gh-token').value.trim();
+            const owner = document.getElementById('gh-owner').value.trim();
+            const repo = document.getElementById('gh-repo').value.trim();
+            const path = document.getElementById('gh-path').value.trim();
+
+            if (!token || !owner || !repo || !path) {
+                showStatus('Vyplňte prosím kompletní konfiguraci připojení k GitHubu.', 'error');
+                return;
+            }
+
+            showStatus('Načítám data z GitHub repozitáře...', 'info');
+            const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+
+            try {
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Cache-Control': 'no-cache'
+                    }
+                });
+
+                if (response.status === 404) {
+                    // Soubor neexistuje -> založíme prázdné pole
+                    expensesData = [];
+                    currentFileSha = null;
+                    renderData();
+                    setUnsavedChanges(false);
+                    updateAuthBadge(true, "Nový soubor");
+                    showStatus('Soubor na zadané cestě nebyl nalezen. Při prvním uložení se automaticky vytvoří.', 'info');
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error(`HTTP chyba status ${response.status}`);
+                }
+
+                const jsonResult = await response.json();
+                currentFileSha = jsonResult.sha; // Uložíme SHA hash pro budoucí přepis/update
+                
+                // Dekódování base64 obsahu (ošetření UTF-8 znaků)
+                const utf8String = atob(jsonResult.content.replace(/\n/g, ''));
+                const decodedText = decodeURIComponent(escape(utf8String));
+                
+                expensesData = JSON.parse(decodedText);
+                if (!Array.isArray(expensesData)) expensesData = [];
+                
+                // Seřazení podle data od nejnovějšího
+                sortExpenses();
+                renderData();
+                setUnsavedChanges(false);
+                updateAuthBadge(true, "Synchronizováno");
+                showStatus('Data byla úspěšně načtena z GitHubu.', 'success');
+
+            } catch (error) {
+                console.error(error);
+                updateAuthBadge(false, "Chyba API");
+                showStatus('Chyba při načítání: Ověřte token, název repozitáře a připojení k internetu.', 'error');
+            }
+        }
+
+        // UKLÁDÁNÍ DAT NA GITHUB API (PUT)
+        async function saveToGitHub() {
+            saveConfigToLocal();
+            const token = document.getElementById('gh-token').value.trim();
+            const owner = document.getElementById('gh-owner').value.trim();
+            const repo = document.getElementById('gh-repo').value.trim();
+            const path = document.getElementById('gh-path').value.trim();
+
+            if (!token || !owner || !repo || !path) {
+                showStatus('Vyplňte konfiguraci před uložením dat.', 'error');
+                return;
+            }
+
+            showStatus('Odesílám a přepisuji data na GitHubu...', 'info');
+            const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+
+            // Převedení JSON dat na korektní Base64 s podporou UTF-8
+            const jsonString = JSON.stringify(expensesData, null, 2);
+            const base64Content = btoa(unescape(encodeURIComponent(jsonString)));
+
+            const bodyData = {
+                message: `Aktualizace výdajů na dovolenou - ${new Date().toLocaleDateString('cs-CZ')}`,
+                content: base64Content
+            };
+
+            // Pokud soubor existoval, musíme poslat jeho SHA pro verifikaci přepisu
+            if (currentFileSha) {
+                bodyData.sha = currentFileSha;
+            }
+
+            try {
+                const response = await fetch(url, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(bodyData)
+                });
+
+                if (!response.ok) {
+                    const errInfo = await response.json();
+                    if(errInfo.message && errInfo.message.includes('sha')) {
+                        throw new Error('Konflikt verzí (SHA nesouhlasí). Načtěte nejprve aktuální data tlačítkem "Načíst data".');
+                    }
+                    throw new Error(`HTTP chyba status ${response.status}`);
+                }
+
+                const resJson = await response.json();
+                currentFileSha = resJson.content.sha; // Aktualizujeme SHA hash pro další zápis
+                
+                setUnsavedChanges(false);
+                updateAuthBadge(true, "Uloženo");
+                showStatus('Skvělé! Soubor byl úspěšně přepsán a bezpečně uložen na GitHubu.', 'success');
+
+            } catch (error) {
+                console.error(error);
+                showStatus(`Chyba při ukládání: ${error.message}`, 'error');
+            }
+        }
+
+        // PŘIDÁNÍ VÝDAJE DO LOKÁLNÍHO STAVU
+        function addExpense(e) {
+            e.preventDefault();
+            
+            const dateInput = document.getElementById('exp-date').value;
+            const descInput = document.getElementById('exp-desc').value.trim();
+            const amountInput = parseFloat(document.getElementById('exp-amount').value);
+            const catInput = document.getElementById('exp-category').value;
+
+            const newItem = {
+                id: Date.now().toString(36) + Math.random().toString(36).substr(2, 5), // unikátní ID položky
+                date: dateInput,
+                description: descInput,
+                amount: amountInput,
+                category: catInput
+            };
+
+            expensesData.push(newItem);
+            sortExpenses();
+            renderData();
+            setUnsavedChanges(true);
+
+            // Vyčištění formuláře (kromě data)
+            document.getElementById('exp-desc').value = '';
+            document.getElementById('exp-amount').value = '';
+            showStatus('Položka byla přidána do tabulky níže. Nezapomeňte změny uložit na GitHub.', 'info');
+        }
+
+        // MAZÁNÍ VÝDAJE Z LOKÁLNÍHO STAVU
+        function deleteExpense(id) {
+            expensesData = expensesData.filter(item => item.id !== id);
+            renderData();
+            setUnsavedChanges(true);
+        }
+
+        function sortExpenses() {
+            expensesData.sort((a, b) => new Date(b.date) - new Date(a.date));
+        }
+
+        // RENDER TABULKY A INTERAKTIVNÍHO SUMÁŘE
+        function renderData() {
+            const tbody = document.getElementById('expenses-tbody');
+            tbody.innerHTML = '';
+
+            if (expensesData.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="p-8 text-center text-slate-500 italic">
+                            Tabulka neobsahuje žádné výdaje. Zadejte novou položku výše.
+                        </td>
+                    </tr>`;
+                document.getElementById('stat-total').innerText = '0,00';
+                document.getElementById('stat-count').innerText = 'Položek: 0';
+                updateChart({});
+                return;
+            }
+
+            let totalSum = 0;
+            const categorySums = {};
+
+            // Procházení a výpočet dat
+            expensesData.forEach(item => {
+                totalSum += item.amount;
+                categorySums[item.category] = (categorySums[item.category] || 0) + item.amount;
+
+                // Formátování data pro uživatele
+                const formattedDate = new Date(item.date).toLocaleDateString('cs-CZ');
+                // Formátování měny
+                const formattedAmount = item.amount.toLocaleString('cs-CZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-800/30 transition-colors border-b border-slate-800/40";
+                tr.innerHTML = `
+                    <td class="p-4 text-slate-400 font-mono text-xs">${formattedDate}</td>
+                    <td class="p-4">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" style="background-color: ${categoryColors[item.category]}20; color: ${categoryColors[item.category]}">
+                            ${item.category}
+                        </span>
+                    </td>
+                    <td class="p-4 text-slate-200 font-medium">${escapeHtml(item.description)}</td>
+                    <td class="p-4 text-right font-mono font-semibold text-slate-100">${formattedAmount} Kč</td>
+                    <td class="p-4 text-center">
+                        <button onclick="deleteExpense('${item.id}')" class="text-slate-500 hover:text-rose-400 p-1 rounded transition-colors" title="Smazat">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Aktualizace textových statistik
+            document.getElementById('stat-total').innerText = totalSum.toLocaleString('cs-CZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            document.getElementById('stat-count').innerText = `Položek: ${expensesData.length}`;
+
+            // Aktualizace grafu a legendy
+            updateChart(categorySums, totalSum);
+        }
+
+        // INICIALIZACE GRAFU (CHART.JS)
+        function initChart() {
+            const ctx = document.getElementById('categoryChart').getContext('2d');
+            myChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        backgroundColor: [],
+                        borderWidth: 2,
+                        borderColor: '#1e293b' // slate-800
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false } // Skryjeme výchozí legendu, vykreslíme vlastní podrobnější
+                    },
+                    cutout: '70%'
+                }
+            });
+        }
+
+        // AKTUALIZACE GRAFU A LEGENDY S PROCENTY
+        function updateChart(categorySums, totalSum) {
+            const labels = Object.keys(categorySums);
+            const data = Object.values(categorySums);
+            const colors = labels.map(cat => categoryColors[cat] || '#64748b');
+
+            // Aktualizace objektu grafu
+            myChart.data.labels = labels;
+            myChart.data.datasets[0].data = data;
+            myChart.data.datasets[0].backgroundColor = colors;
+            myChart.update();
+
+            // Vykreslení vlastní interaktivní legendy
+            const legendContainer = document.getElementById('chart-legend');
+            legendContainer.innerHTML = '';
+
+            if (labels.length === 0) {
+                legendContainer.innerHTML = '<p class="text-slate-500 italic">Žádná data k zobrazení</p>';
+                return;
+            }
+
+            labels.forEach((label, index) => {
+                const amount = data[index];
+                const percentage = totalSum > 0 ? ((amount / totalSum) * 100).toFixed(1) : 0;
+                
+                const legendItem = document.createElement('div');
+                legendItem.className = "flex items-center justify-between border-b border-slate-800/40 pb-1";
+                legendItem.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full inline-block" style="background-color: ${colors[index]}"></span>
+                        <span class="text-slate-300 font-medium">${label}</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-slate-400 font-mono mr-2">${amount.toLocaleString('cs-CZ', {maximumFractionDigits:0})} Kč</span>
+                        <span class="text-cyan-400 font-mono font-semibold">${percentage}%</span>
+                    </div>
+                `;
+                legendContainer.appendChild(legendItem);
+            });
+        }
+
+        // Bezpečnostní ošetření HTML znaků proti XSS
+        function escapeHtml(string) {
+            return String(string).replace(/[&<>"']/g, function (s) {
+                return {
+                    "&": "&amp;",
+                    "<": "&lt;",
+                    ">": "&gt;",
+                    '"': "&quot;",
+                    "'": "&#39;"
+                }[s];
+            });
+        }
+    </script>
+</body>
+</html>
